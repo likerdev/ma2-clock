@@ -1,1 +1,109 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clock</title>
+<style>
+  html, body { height: 100%; margin: 0; background: #000; overflow: hidden; font-family: Arial, Helvetica, sans-serif; }
+  .win { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; gap: 3px; padding: 1px; }
+  .top { flex: 0 0 40px; display: flex; gap: 3px; }
+  .title {
+    position: relative; flex: 1; border: 2px solid #2f3fd0; border-radius: 6px;
+    background: linear-gradient(#0a0aa8, #000078);
+    color: #fff; font-weight: bold; font-size: 17px; line-height: 36px; text-align: center;
+  }
+  .ball {
+    position: absolute; left: 10px; top: 9px; width: 20px; height: 20px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #fff3a0, #e8b800 45%, #6b5000);
+  }
+  .btn {
+    position: relative; flex: 0 0 66px; box-sizing: border-box; border: 1.5px solid #8a8a8a; border-radius: 4px;
+    color: #fff; font-size: 13px; line-height: 14px; text-align: center; padding-top: 5px;
+  }
+  .btn::after { content: ""; position: absolute; right: 1px; bottom: 1px; border: 5px solid transparent; border-right-color: #2f3fd0; border-bottom-color: #2f3fd0; }
+  .panel { position: relative; flex: 1; border: 1px solid #c8960c; min-height: 0; }
+  .panel > svg.digits { position: absolute; inset: 3px; width: calc(100% - 6px); height: calc(100% - 6px); display: block; }
+  .grip { position: absolute; right: 1px; bottom: 1px; width: 26px; height: 26px; }
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="top">
+    <div class="title"><span class="ball"></span>Clock</div>
+    <div class="btn">System<br>Clock</div>
+  </div>
 
+  <div class="panel">
+    <svg class="digits" viewBox="0 48 559 166" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <g id="digits" fill="#e8a90c"></g>
+      <g fill="#e8a90c">
+        <rect x="162" y="108" width="16" height="16" rx="7"/>
+        <rect x="162" y="136" width="16" height="16" rx="7"/>
+        <rect x="370" y="108" width="16" height="16" rx="7"/>
+        <rect x="370" y="136" width="16" height="16" rx="7"/>
+      </g>
+    </svg>
+    <svg class="grip" viewBox="0 0 26 26" xmlns="http://www.w3.org/2000/svg">
+      <defs><pattern id="g" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="2" height="2" fill="#e8a90c"/></pattern></defs>
+      <path d="M26 2 L26 26 L2 26 Z" fill="url(#g)"/>
+    </svg>
+  </div>
+</div>
+
+<script>
+(function () {
+  const W = 60, H = 166, T = 14, h = T / 2, g = 2;
+  const xs = [4, 72, 209, 279, 424, 494], Y = 48;
+
+  const hor = cy => {
+    const x0 = h + g, x1 = W - h - g;
+    return [[x0,cy],[x0+h,cy-h],[x1-h,cy-h],[x1,cy],[x1-h,cy+h],[x0+h,cy+h]];
+  };
+  const ver = (cx, y0, y1) => [[cx,y0],[cx+h,y0+h],[cx+h,y1-h],[cx,y1],[cx-h,y1-h],[cx-h,y0+h]];
+  const mid = H / 2;
+  const SEG = {
+    a: hor(h), g: hor(mid), d: hor(H - h),
+    f: ver(h,     h + g,   mid - g),
+    b: ver(W - h, h + g,   mid - g),
+    e: ver(h,     mid + g, H - h - g),
+    c: ver(W - h, mid + g, H - h - g)
+  };
+  const MAP = {
+    0:'abcdef', 1:'bc', 2:'abdeg', 3:'abcdg', 4:'bcfg',
+    5:'acdfg', 6:'acdefg', 7:'abc', 8:'abcdefg', 9:'abcdfg'
+  };
+
+  const root = document.getElementById('digits');
+  const ns = 'http://www.w3.org/2000/svg';
+  const digits = xs.map(x => {
+    const grp = document.createElementNS(ns, 'g');
+    grp.setAttribute('transform', `translate(${x} ${Y})`);
+    const segs = {};
+    for (const k in SEG) {
+      const p = document.createElementNS(ns, 'polygon');
+      p.setAttribute('points', SEG[k].map(q => q.join(',')).join(' '));
+      grp.appendChild(p);
+      segs[k] = p;
+    }
+    root.appendChild(grp);
+    return segs;
+  });
+
+  const fmt = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit', minute: '2-digit',
+    second: '2-digit', hourCycle: 'h23'
+  });
+
+  function tick() {
+    const s = fmt.format(new Date()).replace(/\D/g, '');
+    digits.forEach((segs, i) => {
+      const on = MAP[s[i]];
+      for (const k in segs) segs[k].style.display = on.includes(k) ? '' : 'none';
+    });
+    setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
